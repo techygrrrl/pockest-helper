@@ -26,7 +26,7 @@ const INITIAL_STATE = {
 };
 
 export function getSaveState(state) {
-  const stateToSave = { ...state };
+  const stateToSave = JSON.parse(JSON.stringify(state));
   delete stateToSave?.data;
   delete stateToSave?.initialized;
   delete stateToSave?.paused;
@@ -56,6 +56,6 @@ export async function getStateFromChromeStorage() {
 export async function saveStateToStorage(state) {
   const stateToSave = getSaveState(state);
   window.localStorage.setItem('PockestHelper', JSON.stringify(stateToSave));
+  await chrome.storage.sync.set({ PockestHelper: stateToSave });
   window.localStorage.setItem('PockestHelperLog', JSON.stringify(state?.log));
-  chrome.storage.sync.set({ PockestHelper: stateToSave });
 }
