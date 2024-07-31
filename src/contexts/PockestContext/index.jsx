@@ -32,10 +32,6 @@ export function PockestProvider({
 }) {
   const [pockestState, pockestDispatch] = useReducer(REDUCER, initialState);
 
-  useEffect(() => {
-    saveStateToStorage(pockestState);
-  }, [pockestState]);
-
   // grab data on init
   useEffect(() => {
     let initTimeout;
@@ -49,6 +45,10 @@ export function PockestProvider({
       window.clearTimeout(initTimeout);
     };
   }, []);
+
+  useEffect(() => {
+    saveStateToStorage(pockestState);
+  }, [pockestState]);
 
   // wrap value in memo so we only re-render when necessary
   const providerValue = useMemo(() => ({
