@@ -10,7 +10,7 @@ import getRandomMinutes from '../../utils/getRandomMinutes';
 
 import {
   getStateFromLocalStorage,
-  saveStateToLocalStorage,
+  saveStateToStorage,
 } from './state';
 import REDUCER from './reducer';
 import {
@@ -33,7 +33,7 @@ export function PockestProvider({
   const [pockestState, pockestDispatch] = useReducer(REDUCER, initialState);
 
   useEffect(() => {
-    saveStateToLocalStorage(pockestState);
+    saveStateToStorage(pockestState);
   }, [pockestState]);
 
   // grab data on init

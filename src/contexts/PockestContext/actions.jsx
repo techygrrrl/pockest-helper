@@ -5,6 +5,9 @@ import postDiscord from '../../utils/postDiscord';
 import isMatchDiscovery from '../../utils/isMatchDiscovery';
 import getMatchReportString from '../../utils/getMatchReportString';
 import {
+  getStateFromChromeStorage,
+} from './state';
+import {
   getAutoPlanSettings,
   fetchPockestStatus,
   getLogEntry,
@@ -256,12 +259,15 @@ export async function pockestInit() {
       allMonsters,
       allHashes,
       data,
+      chromeStorageState,
     ] = await Promise.all([
       fetchAllMonsters(),
       fetchAllHashes(),
       fetchPockestStatus(),
+      getStateFromChromeStorage(),
     ]);
     return [ACTIONS.INIT, {
+      ...chromeStorageState,
       allMonsters,
       allHashes,
       data,
