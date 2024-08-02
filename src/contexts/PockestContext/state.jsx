@@ -36,7 +36,7 @@ export function getStateFromLocalStorage() {
 }
 
 export function saveStateToLocalStorage(state) {
-  const stateToSave = { ...state };
+  const stateToSave = JSON.parse(JSON.stringify(state));
   delete stateToSave?.data;
   delete stateToSave?.initialized;
   delete stateToSave?.paused;
@@ -47,4 +47,14 @@ export function saveStateToLocalStorage(state) {
   delete stateToSave?.allHashes;
   window.localStorage.setItem('PockestHelper', JSON.stringify(stateToSave));
   window.localStorage.setItem('PockestHelperLog', JSON.stringify(state?.log));
+}
+
+export function getStateFromSessionStorage() {
+  const stateFromStorage = window.sessionStorage.getItem('PockestHelperState');
+  return stateFromStorage && JSON.parse(stateFromStorage);
+}
+
+export function saveStateToSessionStorage(state) {
+  const stateToSave = JSON.parse(JSON.stringify(state));
+  window.sessionStorage.setItem('PockestHelperState', JSON.stringify(stateToSave));
 }
