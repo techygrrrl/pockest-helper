@@ -1,7 +1,7 @@
 import getRandomMinutes from '../../utils/getRandomMinutes';
 
 const INITIAL_STATE = {
-  data: {},
+  data: null,
   allMonsters: [],
   allHashes: [],
   paused: true,

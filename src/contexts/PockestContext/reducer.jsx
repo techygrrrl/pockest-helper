@@ -1,13 +1,12 @@
 import log from '../../utils/log';
 import {
-  getAutoPlanSettings,
-  getLogEntry,
+  getDefaultLogEntry,
 } from './getters';
 
 export const ACTIONS = {
   INIT: 'POCKEST_INIT',
   INVALIDATE_SESSION: 'POCKEST_INVALIDATE_SESSION',
-  REFRESH: 'POCKEST_REFRESH',
+  UPDATE: 'POCKEST_UPDATE',
   LOADING: 'POCKEST_LOADING',
   PAUSE: 'POCKEST_PAUSE',
   ERROR: 'POCKEST_ERROR',
@@ -54,38 +53,14 @@ export default function REDUCER(state, [type, payload]) {
         ...state,
         initialized: true,
         loading: false,
-        data: payload?.data,
         allMonsters: payload?.allMonsters,
         allHashes: payload?.allHashes,
-        ...getAutoPlanSettings({
-          ...state,
-          data: payload?.data,
-        }),
       };
-    case ACTIONS.REFRESH:
+    case ACTIONS.UPDATE:
       return {
         ...state,
+        ...payload,
         loading: false,
-        data: payload,
-        eggId: payload?.event === 'hatching' ? payload?.result?.eggType
-          : state?.eggId,
-        eggTimestamp: payload?.event === 'hatching' ? payload?.result?.monsterBirth
-          : state?.eggTimestamp,
-        cleanTimestamp: (payload?.event === 'cleaning')
-          ? payload?.result?.timestamp : state.cleanTimestamp,
-        statLog: (payload?.event === 'training') ? [
-          ...state.statLog,
-          payload?.result?.type,
-        ] : state.statLog,
-        log: (payload?.result) ? [
-          ...state.log,
-          payload?.result,
-        ] : state.log,
-        ...getAutoPlanSettings({
-          ...state,
-          data: payload?.data ?? state?.data,
-          result: payload?.result,
-        }),
       };
     case ACTIONS.SET_LOG:
       return {
@@ -106,7 +81,7 @@ export default function REDUCER(state, [type, payload]) {
         log: [
           ...state.log,
           {
-            ...getLogEntry(state),
+            ...getDefaultLogEntry(state),
             logType: 'error',
             error: `${payload}`,
           },
@@ -122,7 +97,7 @@ export default function REDUCER(state, [type, payload]) {
         log: [
           ...state.log,
           {
-            ...getLogEntry(state),
+            ...getDefaultLogEntry(state),
             logType: 'error',
             error: `${payload}`,
           },

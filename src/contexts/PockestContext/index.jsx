@@ -72,14 +72,13 @@ export function PockestProvider({
 
   // detect hatch sync issues
   useEffect(() => {
-    if (pockestState?.error || pockestState?.loading
-      || !pockestState?.initialized || pockestState?.invalidSession) return;
+    if (pockestState?.invalidSession) return; // we're in bad state; don't update anything
+    if (!pockestState?.initialized) return; // haven't kicked things off yet
+    if (pockestState?.error || pockestState?.loading) return; // already recovering elsewhere
+    if (!pockestState?.data?.monster?.live_time) return; // nothing to desync from
     const bucklerLiveTimestamp = pockestState?.data?.monster?.live_time;
     const stateLiveTimestamp = pockestState?.eggTimestamp;
-    const missingStateTimestamp = bucklerLiveTimestamp && !stateLiveTimestamp;
-    const desyncedTimestamp = stateLiveTimestamp && bucklerLiveTimestamp
-      && stateLiveTimestamp !== bucklerLiveTimestamp;
-    if (missingStateTimestamp || desyncedTimestamp) {
+    if (!stateLiveTimestamp || stateLiveTimestamp !== bucklerLiveTimestamp) {
       pockestDispatch(pockestActions.pockestErrorHatchSync('Pockest Helper detected a Monster that it did not hatch. Please refrain from manually hatching monsters as this will reduce the effectiveness of Pockest Helper.'));
     }
   }, [pockestState]);
@@ -87,8 +86,7 @@ export function PockestProvider({
   // refresh init and set next for 20-30 minutes later
   const refreshInit = React.useCallback(async () => {
     const newNextInit = setSessionTimeout('PockestHelperTimeout-init', 20, 10);
-    const newNextStatus = setSessionTimeout('PockestHelperTimeout-status', 5, 5);
-    log(`REFRESH INIT\nnext status @ ${(new Date(newNextStatus)).toLocaleString()}\nnext init @ ${(new Date(newNextInit)).toLocaleString()}`);
+    log(`UPDATE INIT\nnext @ ${(new Date(newNextInit)).toLocaleString()}`);
     pockestDispatch(pockestActions.pockestLoading());
     pockestDispatch(await pockestActions.pockestInit());
   }, []);
@@ -96,27 +94,33 @@ export function PockestProvider({
   // refresh status and set next for 5-10 minutes later
   const refreshStatus = React.useCallback(async () => {
     const newNextStatus = setSessionTimeout('PockestHelperTimeout-status', 5, 5);
-    log(`REFRESH STATUS\nnext status @ ${(new Date(newNextStatus)).toLocaleString()}`);
+    log(`UPDATE STATUS\nnext @ ${(new Date(newNextStatus)).toLocaleString()}`);
     pockestDispatch(pockestActions.pockestLoading());
-    pockestDispatch(await pockestActions.pockestRefresh(pockestState));
+    pockestDispatch(await pockestActions.pockestStatus(pockestState));
   }, [pockestState]);
 
   // refresh check loop
   React.useEffect(() => {
     if (pockestState?.error || pockestState?.loading
       || pockestState?.invalidSession) return () => {};
-    let rafId;
-    const rafRefresh = async () => {
+    let refreshTimeout;
+    const refreshCheck = async () => {
       const now = Date.now();
       const nextInit = getSessionTimeout('PockestHelperTimeout-init');
-      if (now >= nextInit) await refreshInit();
+      if (now >= nextInit) {
+        await refreshInit();
+        return;
+      }
       const nextStatus = getSessionTimeout('PockestHelperTimeout-status');
-      if (now >= nextStatus) await refreshStatus();
-      rafId = window.requestAnimationFrame(rafRefresh);
+      if (pockestState.initialized && now >= nextStatus) {
+        await refreshStatus();
+        return;
+      }
+      refreshTimeout = window.setTimeout(refreshCheck, 1000);
     };
-    rafRefresh();
+    refreshTimeout = window.setTimeout(refreshCheck, 1000);
     return () => {
-      window.cancelAnimationFrame(rafId);
+      window.clearTimeout(refreshTimeout);
     };
   }, [pockestState, refreshInit, refreshStatus]);
 
@@ -125,21 +129,21 @@ export function PockestProvider({
   React.useEffect(() => {
     if (!pockestState?.error || pockestState?.loading
         || pockestState?.invalidSession) return () => {};
-    let rafId;
-    const rafRefresh = async () => {
+    let refreshTimeout;
+    const refreshCheck = async () => {
       const now = Date.now();
       const nextInit = getSessionTimeout('PockestHelperTimeout-error');
       if (now >= nextInit) {
         const newNextInit = setSessionTimeout('PockestHelperTimeout-error', 1, 3);
-        log(`REFRESH ERROR\nnext error refresh @ ${(new Date(newNextInit)).toLocaleString()}\n${pockestState?.error}`);
+        log(`UPDATE ERROR\nnext error refresh @ ${(new Date(newNextInit)).toLocaleString()}\n${pockestState?.error}`);
         await refreshInit();
       } else {
-        rafId = window.requestAnimationFrame(rafRefresh);
+        refreshTimeout = window.setTimeout(refreshCheck, 1000);
       }
     };
-    rafRefresh();
+    refreshTimeout = window.setTimeout(refreshCheck, 1000);
     return () => {
-      window.cancelAnimationFrame(rafId);
+      window.clearTimeout(refreshTimeout);
     };
   }, [pockestState, refreshInit]);
 
@@ -201,7 +205,7 @@ export function PockestProvider({
       if (autoCure && isStunned && !shouldLetDie) {
         log('CURE');
         pockestDispatch(pockestActions.pockestLoading());
-        pockestDispatch(await pockestActions.pockestCure());
+        pockestDispatch(await pockestActions.pockestCure(pockestState));
         return;
       }
 
@@ -227,7 +231,7 @@ export function PockestProvider({
       if (attemptToFeed && inFeedWindow) {
         log('FEED');
         pockestDispatch(pockestActions.pockestLoading());
-        pockestDispatch(await pockestActions.pockestFeed());
+        pockestDispatch(await pockestActions.pockestFeed(pockestState));
         return;
       }
 
@@ -239,7 +243,7 @@ export function PockestProvider({
       if (willTrain) {
         log(`TRAIN, stat=${STAT_ID[stat]}`);
         pockestDispatch(pockestActions.pockestLoading());
-        pockestDispatch(await pockestActions.pockestTrain(stat));
+        pockestDispatch(await pockestActions.pockestTrain(pockestState, stat));
         return;
       }
 
