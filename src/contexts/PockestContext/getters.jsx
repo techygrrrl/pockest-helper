@@ -264,50 +264,61 @@ export function getCurrentPlanScheduleWindows(state) {
   };
 }
 
-export function getAutoPlanSettings(state, settingOverrides = {}) {
-  const payload = {
-    ...settingOverrides,
-  };
-  const data = state?.data;
+export function isMonsterDead(state, data) {
+  if (data?.event === 'death') return true;
   const now = Date.now();
-  const birthTimestamp = state?.eggTimestamp === data?.monster?.live_time
-    ? state?.eggTimestamp
-    : data?.monster?.live_time;
   const deathTimestamp = getDeathTimer({
     ...state,
-    data,
+    data: data || state?.data,
   });
-  const isMonsterDead = data?.event === 'death' || now >= deathTimestamp;
-  const isMonsterDeparted = data?.event === 'departure' || now >= (birthTimestamp + daysToMs(7));
-  const isMonsterMissing = data?.event === 'monster_not_found';
-  if (isMonsterDead || isMonsterDeparted || isMonsterMissing) {
-    payload.autoPlay = true;
-    payload.paused = true;
-    payload.statLog = [];
-    payload.eggId = null;
-    payload.eggTimestamp = null;
+  return now >= deathTimestamp;
+}
+
+export function isMonsterDeparted(state, data) {
+  if (data?.event === 'departure') return true;
+  const monster = data?.monster || state?.data?.monster;
+  const now = Date.now();
+  const birthTimestamp = state?.eggTimestamp === monster?.live_time
+    ? state?.eggTimestamp
+    : monster?.live_time;
+  return now >= (birthTimestamp + daysToMs(7));
+}
+
+export function isMonsterMissing(state, data) {
+  return data?.event === 'monster_not_found';
+}
+
+export function getAutoPlanSettings(state, data) {
+  const newSettings = {};
+  if (isMonsterDead(state, data)
+    || isMonsterDeparted(state, data)
+    || isMonsterMissing(state, data)) {
+    newSettings.autoPlay = true;
+    newSettings.paused = true;
+    newSettings.statLog = [];
+    newSettings.eggId = null;
+    newSettings.eggTimestamp = null;
   }
-  if (settingOverrides.autoPlan ?? state.autoPlan) {
+  if (state.autoPlan || newSettings.autoPlan) {
     const targetMonsterPlan = getCurrentTargetMonsterPlan({
       ...state,
-      ...payload,
       data,
     });
-    payload.autoPlan = true;
-    payload.autoClean = true;
-    payload.autoFeed = true;
-    payload.autoTrain = true;
-    payload.autoMatch = true;
-    payload.autoCure = true;
-    payload.planId = targetMonsterPlan?.planId;
-    payload.statPlanId = targetMonsterPlan?.statPlanId;
-    payload.planAge = targetMonsterPlan?.planAge;
-    payload.stat = targetMonsterPlan?.stat;
-    payload.cleanOffset = targetMonsterPlan?.cleanOffset;
-    payload.feedOffset = targetMonsterPlan?.feedOffset;
-    payload.cleanFrequency = targetMonsterPlan?.cleanFrequency;
-    payload.feedFrequency = targetMonsterPlan?.feedFrequency;
-    payload.feedTarget = targetMonsterPlan?.feedTarget;
+    newSettings.autoPlan = true;
+    newSettings.autoClean = true;
+    newSettings.autoFeed = true;
+    newSettings.autoTrain = true;
+    newSettings.autoMatch = true;
+    newSettings.autoCure = true;
+    newSettings.planId = targetMonsterPlan?.planId;
+    newSettings.statPlanId = targetMonsterPlan?.statPlanId;
+    newSettings.planAge = targetMonsterPlan?.planAge;
+    newSettings.stat = targetMonsterPlan?.stat;
+    newSettings.cleanOffset = targetMonsterPlan?.cleanOffset;
+    newSettings.feedOffset = targetMonsterPlan?.feedOffset;
+    newSettings.cleanFrequency = targetMonsterPlan?.cleanFrequency;
+    newSettings.feedFrequency = targetMonsterPlan?.feedFrequency;
+    newSettings.feedTarget = targetMonsterPlan?.feedTarget;
   }
-  return payload;
+  return newSettings;
 }
